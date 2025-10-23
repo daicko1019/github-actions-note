@@ -20,6 +20,7 @@
 以下の環境変数をGitHub Actionsのリポジトリシークレットに設定してください：
 
 - `GOOGLE_GENERATIVE_AI_API_KEY`（必須）- Gemini APIキー
+- `GEMINI_API_KEY`（必須）- ローカル/スクリプトから Gemini を利用する場合のAPIキー（`GOOGLE_GENERATIVE_AI_API_KEY` と同じ値で可）
 - `TAVILY_API_KEY`（必須）- Tavily検索APIキー
 - `NOTE_STORAGE_STATE_JSON`（必須）- note.comのログイン状態（後述の手順で取得）
 - `PERPLEXITY_API_KEY`（任意）- `.github/workflows/note-perplexity.yaml` を使う場合に必要

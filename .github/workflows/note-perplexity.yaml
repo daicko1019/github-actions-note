@@ -235,6 +235,7 @@ jobs:
     runs-on: ubuntu-latest
     env:
       GOOGLE_GENERATIVE_AI_API_KEY: ${{ secrets.GOOGLE_GENERATIVE_AI_API_KEY }}
+      GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY || secrets.GOOGLE_GENERATIVE_AI_API_KEY }}
       THEME: ${{ github.event.inputs.theme }}
       TARGET: ${{ github.event.inputs.target }}
       MESSAGE: ${{ github.event.inputs.message }}
@@ -265,6 +266,7 @@ jobs:
           echo "$RESEARCH_B64" | base64 -d > .note-artifacts/research.md || echo "$RESEARCH_B64" | base64 --decode > .note-artifacts/research.md
 
       - name: Generate draft (title/body/tags)
+        run: node write.mjs
         run: |
           cat > write.mjs <<'EOF'
           import { generateText } from 'ai';

@@ -155,44 +155,7 @@ jobs:
           echo "$RESEARCH_B64" | base64 -d > .note-artifacts/research.md || echo "$RESEARCH_B64" | base64 --decode > .note-artifacts/research.md
 
       - name: Generate draft (title/body/tags)
-        run: |
-          cat > write.mjs <<'EOF'
-          import { generateText, createGoogle } from 'ai';
-          import fs from 'fs';
-          const google=createGoogle({});
-          const POST_SCHEMA={type:'object',properties:{title:{type:'string'},draftBody:{type:'string'},tags:{type:'array',items:{type:'string'}}},required:['title','draftBody','tags']};
-          const theme=process.env.THEME||''; const target=process.env.TARGET||''; const message=process.env.MESSAGE||''; const cta=process.env.CTA||'';
-          const inputTags=(process.env.INPUT_TAGS||'').split(',').map(s=>s.trim()).filter(Boolean);
-          const researchReport=fs.readFileSync('.note-artifacts/research.md','utf8');
-          const modelName='gemini-2.5-pro';
-          function extractJsonFlexible(raw){const t=(raw||'').trim().replace(/\u200B/g,'');try{return JSON.parse(t);}catch{}const m=t.match(/```[a-zA-Z]*\s*([\s\S]*?)\s*```/);if(m&&m[1]){try{return JSON.parse(m[1].trim());}catch{}}const f=t.indexOf('{'),l=t.lastIndexOf('}');if(f!==-1&&l!==-1&&l>f){const c=t.slice(f,l+1);try{return JSON.parse(c);}catch{}}return null;}
-          async function repairJson(raw){const sys='入力から {"title":string,"draftBody":string,"tags":string[]} のJSONのみ返答。';const result=await generateText({model:google(modelName),system:sys,prompt:String(raw),temperature:0,responseSchema:POST_SCHEMA,maxTokens:2048,maxOutputTokens:2048});try{return JSON.parse(result.text);}catch{return extractJsonFlexible(result.text||'');}}
-          function sanitizeTitle(t){
-            let s=String(t||'').trim();
-            // フェンスや見出し、引用符を除去
-            s=s.replace(/^```[a-zA-Z0-9_-]*\s*$/,'').replace(/^```$/,'');
-            s=s.replace(/^#+\s*/,'');
-            s=s.replace(/^"+|"+$/g,'').replace(/^'+|'+$/g,'');
-            s=s.replace(/^`+|`+$/g,'');
-            s=s.replace(/^json$/i,'').trim();
-            if(!s) s='タイトル（自動生成）';
-            return s;
-          }
-          function deriveTitleFromText(text){
-            const lines=(text||'').split(/\r?\n/).map(l=>l.trim()).filter(Boolean);
-            const firstReal=lines.find(l=>!/^```/.test(l))||lines[0]||'';
-            return sanitizeTitle(firstReal);
-          }
-          const sysWrite='note.com向け長文記事の生成。JSON {title,draftBody,tags[]} で返答。draftBodyは6000〜9000文字を目安に十分な分量で、章ごとに小見出しと箇条書きを適切に含めること。';
-          const prompt=[`{テーマ}: ${theme}`,`{ペルソナ}: ${target}`,`{リサーチ内容}: ${researchReport}`,`{伝えたいこと}: ${message}`,`{読後のアクション}: ${cta}`].join('\n');
-          const {text}=await generateText({model:google(modelName),system:sysWrite,prompt,temperature:0.7,maxOutputTokens:30000});
-          let obj=extractJsonFlexible(text||'')||await repairJson(text||'');
-          let title, draftBody, tags; if(obj){title=sanitizeTitle(obj.title); draftBody=String(obj.draftBody||'').trim(); tags=Array.isArray(obj.tags)?obj.tags.map(String):[]}
-          if(!title||!draftBody){ title=deriveTitleFromText(text||''); const lines=(text||'').split(/\r?\n/); draftBody=lines.slice(1).join('\n').trim()||(text||''); tags=[]}
-          if(inputTags.length){tags=Array.from(new Set([...(tags||[]),...inputTags]));}
-          fs.writeFileSync('.note-artifacts/draft.json',JSON.stringify({title,draftBody,tags},null,2));
-          EOF
-          node write.mjs
+        run: node write.mjs
 
       - name: Collect draft
         id: collect

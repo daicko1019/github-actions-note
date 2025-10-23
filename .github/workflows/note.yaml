@@ -51,10 +51,10 @@ jobs:
   research:
     name: Research (Gemini 2.5 Flash-Lite)
     runs-on: ubuntu-latest
-      env:
-        GOOGLE_GENERATIVE_AI_API_KEY: ${{ secrets.GOOGLE_GENERATIVE_AI_API_KEY }}
-        THEME: ${{ github.event.inputs.theme }}
-        TARGET: ${{ github.event.inputs.target }}
+    env:
+      GOOGLE_GENERATIVE_AI_API_KEY: ${{ secrets.GOOGLE_GENERATIVE_AI_API_KEY }}
+      THEME: ${{ github.event.inputs.theme }}
+      TARGET: ${{ github.event.inputs.target }}
     outputs:
       research_b64: ${{ steps.collect.outputs.research_b64 }}
     steps:

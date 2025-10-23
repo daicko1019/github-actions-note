@@ -2,10 +2,16 @@
 
 このリポジトリの `.github/workflows/note.yaml` は、以下のパイプラインをGitHub Actionsで実行します。
 
-1) **リサーチAgent**: Claude Code SDK の WebSearch / WebFetch によるリサーチレポート作成
-2) **執筆Agent**: Anthropic Claude 4.0 Sonnet でタイトル/本文/タグ(JSON)を生成
+1) **リサーチAgent**: Gemini 2.5 Flash-Lite によるリサーチレポート作成
+2) **執筆Agent**: Google Gemini 2.5 Flash-Lite でタイトル/本文/タグ(JSON)を生成
 3) **ファクトチェックAgent**: Tavily を使った検証結果を反映し本文を修正
 4) **ドラフトAgent**: Playwrightで note.com に下書き/公開（storageState を利用）
+
+---
+
+## 別バリアント: Note Workflow (Perplexity)
+
+`.github/workflows/note-perplexity.yaml` では、Perplexity Search API で取得した検索結果をもとに Gemini 2.5 Flash-Lite がレポート生成・執筆・ファクトチェックを行う代替パイプラインも用意しています。追加で `PERPLEXITY_API_KEY` を設定すれば、GitHub Actions から同様の入力項目で実行できます。
 
 ---
 
@@ -13,9 +19,11 @@
 
 以下の環境変数をGitHub Actionsのリポジトリシークレットに設定してください：
 
-- `ANTHROPIC_API_KEY`（必須）- Claude APIキー
+- `GOOGLE_GENERATIVE_AI_API_KEY`（必須）- Gemini APIキー
+- `GEMINI_API_KEY`（必須）- ローカル/スクリプトから Gemini を利用する場合のAPIキー（`GOOGLE_GENERATIVE_AI_API_KEY` と同じ値で可）
 - `TAVILY_API_KEY`（必須）- Tavily検索APIキー
 - `NOTE_STORAGE_STATE_JSON`（必須）- note.comのログイン状態（後述の手順で取得）
+- `PERPLEXITY_API_KEY`（任意）- `.github/workflows/note-perplexity.yaml` を使う場合に必要
 
 ---
 
@@ -116,8 +124,8 @@ node login-note.mjs
 
 ## 動作イメージ
 
-1. **Research ジョブ**: Claude Code SDK を使用してWebSearchとWebFetchでリサーチを実行
-2. **Write ジョブ**: Claude Sonnet 4.0 でタイトル、本文、タグを生成
+1. **Research ジョブ**: Gemini 2.5 Flash-Lite を用いてリサーチレポートを生成
+2. **Write ジョブ**: Gemini 2.5 Flash-Lite でタイトル、本文、タグを生成
 3. **Fact-check ジョブ**: Tavily API で事実確認を行い、本文を修正
 4. **Post ジョブ**: Playwright でnote.comに自動投稿
    - `is_public: false` の場合は「下書き保存」
@@ -141,8 +149,7 @@ node login-note.mjs
 ## 技術スタック
 
 - **GitHub Actions**: CI/CDパイプライン
-- **Claude Code SDK**: リサーチAgent（WebSearch/WebFetch）
-- **AI SDK (Anthropic)**: 執筆・ファクトチェックAgent
+- **AI SDK (Google Gemini)**: リサーチ/執筆・ファクトチェックAgent
 - **Tavily API**: 事実確認・検証
 - **Playwright**: note.com への自動投稿
 - **marked**: Markdown to HTML変換
@@ -159,7 +166,6 @@ node login-note.mjs
 
 ## 参考
 
-- [Claude Code SDK](https://github.com/anthropics/anthropic-claude-code)
-- [AI SDK (Anthropic)](https://sdk.vercel.ai/docs)
+- [AI SDK (Google Gemini)](https://sdk.vercel.ai/docs)
 - [Tavily API](https://docs.tavily.com/)
 - [Playwright](https://playwright.dev/)

@@ -8,7 +8,7 @@ if (!GEMINI_API_KEY) {
 }
 
 const google = createGoogle({ apiKey: GEMINI_API_KEY });
-const MODEL_NAME = process.env.WRITE_MODEL || 'gemini-2.5-pro';
+const MODEL_NAME = process.env.WRITE_MODEL || 'gemini-2.5-flash-lite';
 
 // 応答として期待する JSON 構造のスキーマを定義します
 const POST_SCHEMA = {

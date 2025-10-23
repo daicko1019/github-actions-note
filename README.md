@@ -2,8 +2,8 @@
 
 このリポジトリの `.github/workflows/note.yaml` は、以下のパイプラインをGitHub Actionsで実行します。
 
-1) **リサーチAgent**: Gemini 1.5 Flash によるリサーチレポート作成
-2) **執筆Agent**: Google Gemini 1.5 Pro でタイトル/本文/タグ(JSON)を生成
+1) **リサーチAgent**: Gemini 2.5 Flash-Lite によるリサーチレポート作成
+2) **執筆Agent**: Google Gemini 2.5 Flash-Lite でタイトル/本文/タグ(JSON)を生成
 3) **ファクトチェックAgent**: Tavily を使った検証結果を反映し本文を修正
 4) **ドラフトAgent**: Playwrightで note.com に下書き/公開（storageState を利用）
 
@@ -11,7 +11,7 @@
 
 ## 別バリアント: Note Workflow (Perplexity)
 
-`.github/workflows/note-perplexity.yaml` では、Perplexity Search API で取得した検索結果をもとに Gemini 1.5 Pro がレポート生成・執筆・ファクトチェックを行う代替パイプラインも用意しています。追加で `PERPLEXITY_API_KEY` を設定すれば、GitHub Actions から同様の入力項目で実行できます。
+`.github/workflows/note-perplexity.yaml` では、Perplexity Search API で取得した検索結果をもとに Gemini 2.5 Flash-Lite がレポート生成・執筆・ファクトチェックを行う代替パイプラインも用意しています。追加で `PERPLEXITY_API_KEY` を設定すれば、GitHub Actions から同様の入力項目で実行できます。
 
 ---
 
@@ -124,8 +124,8 @@ node login-note.mjs
 
 ## 動作イメージ
 
-1. **Research ジョブ**: Gemini 1.5 Flash を用いてリサーチレポートを生成
-2. **Write ジョブ**: Gemini 1.5 Pro でタイトル、本文、タグを生成
+1. **Research ジョブ**: Gemini 2.5 Flash-Lite を用いてリサーチレポートを生成
+2. **Write ジョブ**: Gemini 2.5 Flash-Lite でタイトル、本文、タグを生成
 3. **Fact-check ジョブ**: Tavily API で事実確認を行い、本文を修正
 4. **Post ジョブ**: Playwright でnote.comに自動投稿
    - `is_public: false` の場合は「下書き保存」

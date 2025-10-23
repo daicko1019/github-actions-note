@@ -9,6 +9,12 @@
 
 ---
 
+## 別バリアント: Note Workflow (Perplexity)
+
+`.github/workflows/note-perplexity.yaml` では、Perplexity Search API で取得した検索結果をもとに Gemini 1.5 Pro がレポート生成・執筆・ファクトチェックを行う代替パイプラインも用意しています。追加で `PERPLEXITY_API_KEY` を設定すれば、GitHub Actions から同様の入力項目で実行できます。
+
+---
+
 ## 事前準備（リポジトリSecrets）
 
 以下の環境変数をGitHub Actionsのリポジトリシークレットに設定してください：
@@ -16,6 +22,7 @@
 - `GOOGLE_GENERATIVE_AI_API_KEY`（必須）- Gemini APIキー
 - `TAVILY_API_KEY`（必須）- Tavily検索APIキー
 - `NOTE_STORAGE_STATE_JSON`（必須）- note.comのログイン状態（後述の手順で取得）
+- `PERPLEXITY_API_KEY`（任意）- `.github/workflows/note-perplexity.yaml` を使う場合に必要
 
 ---
 

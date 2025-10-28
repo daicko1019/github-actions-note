@@ -1,4 +1,4 @@
-import { generateObject, createGoogle } from 'ai';
+import { generateText, createGoogle } from 'ai';
 import fs from 'fs';
 
 const GEMINI_API_KEY = process.env.GEMINI_API_KEY || process.env.GOOGLE_GENERATIVE_AI_API_KEY;
@@ -64,20 +64,21 @@ function extractJsonFlexible(raw) {
 
 async function repairJson(raw) {
   const system = '入力から {"title":string,"draftBody":string,"tags":string[]} のJSONのみ返答。';
-  const result = await generateObject({
+  const result = await generateText({
     model: google(MODEL_NAME),
     system,
     prompt: String(raw),
     temperature: 0,
-    schema: POST_SCHEMA,
+    responseSchema: POST_SCHEMA,
+    maxTokens: 2048,
     maxOutputTokens: 2048
   });
 
-  if (result.object) {
-    return result.object;
+  try {
+    return JSON.parse(result.text);
+  } catch (_) {
+    return extractJsonFlexible(result.text || '');
   }
-
-  return extractJsonFlexible(result.text || '');
 }
 
 function sanitizeTitle(value) {
@@ -114,16 +115,16 @@ async function main() {
   const systemPrompt = 'note.com向け長文記事の生成。JSON {title,draftBody,tags[]} で返答。draftBodyは6000〜9000文字を目安に十分な分量で、章ごとに小見出しと箇条書きを適切に含めること。';
   const prompt = [`{テーマ}: ${theme}`, `{ペルソナ}: ${target}`, `{リサーチ内容}: ${researchReport}`, `{伝えたいこと}: ${message}`, `{読後のアクション}: ${cta}`].join('\n');
 
-  const { object, text } = await generateObject({
+  const { text } = await generateText({
     model: google(MODEL_NAME),
     system: systemPrompt,
     prompt,
     temperature: 0.7,
-    schema: POST_SCHEMA,
+    responseSchema: POST_SCHEMA,
     maxOutputTokens: 8192
   });
 
-  let parsed = object || extractJsonFlexible(text || '') || (await repairJson(text || ''));
+  let parsed = extractJsonFlexible(text || '') || (await repairJson(text || ''));
 
   let title;
   let draftBody;

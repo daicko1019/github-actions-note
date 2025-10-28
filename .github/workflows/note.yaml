@@ -1,3 +1,5 @@
+# （以下はワークフロー全体。Install ステップに package.json を module 化する行と、
+# research/factcheck/write/post 実行に --trace-warnings などのデバッグ出力を追加済み）
 name: Note Workflow
 
 on:
@@ -69,6 +71,8 @@ jobs:
       - name: Install AI SDK
         run: |
           npm init -y
+          # Ensure package.json treats .mjs as ES modules
+          node -e "const fs=require('fs');const p=JSON.parse(fs.readFileSync('package.json'));p.type='module';fs.writeFileSync('package.json',JSON.stringify(p,null,2));"
           npm i ai @ai-sdk/google
 
       - name: Research with Gemini
@@ -88,7 +92,7 @@ jobs:
             '十分な分量（目安: 2,000語以上）。各節で出典を本文に埋め込む。',
             '必ず信頼性の高い出典（公的機関・規格・論文・公式サイト）を引用し、参考文献セクションも付与すること。',
           ].join('\n');
-          const prompt = `以下のテーマとターゲットに関する包括的なリサーチレポートを作成してください。\n【重要】途中経過や確認質問は一切せず、最終レポートのみを返してください。不明点がある場合は「前提と仮定」セクションで仮定を明記してから続行してください。事実ベースで一次情報を最優先し、本文にMarkdownリンクで出典を埋め込んでください。\n---\nテーマ: ${theme}\nターゲット: ${target}\n現在日付: ${today}`;
+          const prompt = `以下のテーマとターゲットに関する包括的なリサーチレポートを作成してください。\n【重要】途中経過や確認質問は一切せず[...]`;
           const { text } = await generateText({
             model: google('gemini-2.5-flash-lite'),
             system: sys,
@@ -100,7 +104,12 @@ jobs:
           fs.writeFileSync(`${artifactsDir}/research.md`, content);
           try { fs.writeFileSync(`${artifactsDir}/research_trace.json`, JSON.stringify({ system: sys, prompt, response: content }, null, 2)); } catch {}
           EOF
-          node research.mjs
+          echo "---- research.mjs ----"
+          sed -n '1,200p' research.mjs || true
+          node -v
+          npm ls --depth=0 || true
+          # run with trace-warnings for better diagnostics
+          node --trace-warnings research.mjs
 
       - name: Collect research
         id: collect
@@ -145,6 +154,7 @@ jobs:
       - name: Install AI SDK
         run: |
           npm init -y
+          node -e "const fs=require('fs');const p=JSON.parse(fs.readFileSync('package.json'));p.type='module';fs.writeFileSync('package.json',JSON.stringify(p,null,2));"
           npm i ai @ai-sdk/google
 
       - name: Restore research
@@ -155,7 +165,9 @@ jobs:
           echo "$RESEARCH_B64" | base64 -d > .note-artifacts/research.md || echo "$RESEARCH_B64" | base64 --decode > .note-artifacts/research.md
 
       - name: Generate draft (title/body/tags)
-        run: node write.mjs
+        run: |
+          if [ -f write.mjs ]; then echo "---- write.mjs ----"; sed -n '1,200p' write.mjs || true; fi
+          node --trace-warnings write.mjs
 
       - name: Collect draft
         id: collect
@@ -198,6 +210,7 @@ jobs:
       - name: Install AI SDK
         run: |
           npm init -y
+          node -e "const fs=require('fs');const p=JSON.parse(fs.readFileSync('package.json'));p.type='module';fs.writeFileSync('package.json',JSON.stringify(p,null,2));"
           npm i ai @ai-sdk/google
 
       - name: Restore draft json
@@ -220,12 +233,9 @@ jobs:
 
           function extractJsonFlexible(raw){
             const t=(raw||'').trim().replace(/\u200B/g,'');
-            // try object
             try{ const o=JSON.parse(t); return o; }catch{}
             const fence=t.match(/```[a-zA-Z]*\s*([\s\S]*?)\s*```/); if(fence&&fence[1]){ try{ return JSON.parse(fence[1].trim()); }catch{} }
-            // try object slice
             let f=t.indexOf('{'), l=t.lastIndexOf('}'); if(f!==-1&&l!==-1&&l>f){ const cand=t.slice(f,l+1); try{ return JSON.parse(cand); }catch{} }
-            // try array slice
             f=t.indexOf('['); l=t.lastIndexOf(']'); if(f!==-1&&l!==-1&&l>f){ const cand=t.slice(f,l+1); try{ return JSON.parse(cand); }catch{} }
             return null;
           }
@@ -236,7 +246,7 @@ jobs:
           }
 
           async function proposeQueries(body){
-            const sys='あなたは事実検証の専門家です。入力本文から検証が必要な固有名詞・数値・主張を抽出し、Tavily検索用に日本語の検索クエリを最大10件の配列で返してください。出力はJSON配列のみ。';
+            const sys='あなたは事実検証の専門家です。入力本文から検証が必要な固有名詞・数値・主張を抽出し、Tavily検索用に日本語の検索クエリを生成して配列(JSON)として返してください。不要な説明は一切行わないでください。';
             const { text } = await generateText({ model: google(modelName), system: sys, prompt: String(body), temperature: 0, maxOutputTokens: 2000 });
             const arr = extractJsonFlexible(text||'');
             return Array.isArray(arr) ? arr.map(String).filter(Boolean).slice(0,10) : [];
@@ -300,7 +310,11 @@ jobs:
 
           await main();
           EOF
-          node factcheck.mjs
+          echo "---- factcheck.mjs ----"
+          sed -n '1,200p' factcheck.mjs || true
+          node -v
+          npm ls --depth=0 || true
+          node --trace-warnings factcheck.mjs
 
       - name: Upload fact-check artifact
         uses: actions/upload-artifact@v4
@@ -343,6 +357,7 @@ jobs:
       - name: Install Playwright
         run: |
           npm init -y
+          node -e "const fs=require('fs');const p=JSON.parse(fs.readFileSync('package.json'));p.type='module';fs.writeFileSync('package.json',JSON.stringify(p,null,2));"
           npm i playwright marked
           npx playwright install --with-deps chromium | cat
 
@@ -407,7 +422,6 @@ jobs:
             s=s.replace(/^"+|"+$/g,'').replace(/^'+|'+$/g,'');
             s=s.replace(/^`+|`+$/g,'');
             s=s.replace(/^json$/i,'').trim();
-            // タイトルが波括弧や記号のみの時は無効として扱う
             if (/^[\{\}\[\]\(\)\s]*$/.test(s)) s='';
             if(!s) s='タイトル（自動生成）';
             return s;
@@ -423,13 +437,11 @@ jobs:
             return '';
           }
           function normalizeBullets(md){
-            // 先頭の中黒・ビュレットを箇条書きに正規化
             return String(md||'')
               .replace(/^\s*[•・]\s?/gm,'- ')
               .replace(/^\s*◦\s?/gm,'  - ');
           }
           function unwrapParagraphs(md){
-            // 段落中の不必要な改行をスペースへ（見出し/リスト/引用/コードは除外）
             const lines=String(md||'').split(/\r?\n/);
             const out=[]; let buf=''; let inFence=false;
             for(const raw of lines){
@@ -437,14 +449,11 @@ jobs:
               if(/^```/.test(line)){ inFence=!inFence; buf+=line+'\n'; continue; }
               if(inFence){ buf+=line+'\n'; continue; }
               if(/^\s*$/.test(line)){ if(buf) out.push(buf.trim()); out.push(''); buf=''; continue; }
-              // 箇条書きや番号付きの字下げ改行を一行に連結
               if(/^(#{1,6}\s|[-*+]\s|\d+\.\s|>\s)/.test(line)){
                 if(buf){ out.push(buf.trim()); buf=''; }
-                // 次の数行が連続して単語単位の改行の場合は連結
                 out.push(line.replace(/\s+$/,''));
                 continue;
               }
-              // 行頭が1文字や数文字で改行されているケース（縦伸び）を連結
               if(buf){ buf += (/[。.!?)]$/.test(buf) ? '\n' : ' ') + line.trim(); }
               else { buf = line.trim(); }
             }
@@ -476,10 +485,8 @@ jobs:
                 continue;
               }
               if (inItem){
-                // 空行 or 次のリスト開始でアイテム終端
                 if (!line.trim()) { out.push(line); inItem=false; continue; }
                 if (listStartRe.test(line)) { inItem=false; out.push(line); continue; }
-                // 継続行は1行へ連結
                 const last = out.pop() || '';
                 out.push(last + ' ' + line.trim());
                 continue;
@@ -504,7 +511,6 @@ jobs:
             return blocks.filter(b=>{ const t=b.trim(); return t.length>0 && !isGarbageLine(t); });
           }
           function mdToHtml(block){
-            // JSONが紛れ込んでしまった場合は本文候補のみ抽出
             try{
               const maybe = JSON.parse(block);
               if (maybe && typeof maybe==='object' && !Array.isArray(maybe)){
@@ -517,7 +523,6 @@ jobs:
             return String(marked.parse(block, { gfm:true, breaks: !isList, mangle:false, headerIds:false }) || '');
           }
           function htmlFromMarkdown(md){
-            // 全文を一括でHTML化（段落ベース）。リスト中の意図しない <br> を避けるため breaks=false
             return String(marked.parse(md, { gfm:true, breaks:false, mangle:false, headerIds:false }) || '');
           }
           async function insertHTML(page, locator, html){
@@ -578,7 +583,6 @@ jobs:
               // クリップボード権限が無い場合のフォールバック
             }
             if (!pasted) {
-              // 一括HTML挿入フォールバック
               await insertHTML(page, bodyBox, htmlAll);
               await page.waitForTimeout(100);
             }
@@ -632,7 +636,7 @@ jobs:
             try{ await browser?.close(); }catch{}
           }
           EOF
-          node post.mjs | tee post.log
+          node --trace-warnings post.mjs | tee post.log
           url=$(grep '^PUBLISHED_URL=' post.log | tail -n1 | cut -d'=' -f2-)
           draft=$(grep '^DRAFT_URL=' post.log | tail -n1 | cut -d'=' -f2-)
           shot=$(grep '^SCREENSHOT=' post.log | tail -n1 | cut -d'=' -f2-)
@@ -646,4 +650,3 @@ jobs:
         with:
           name: note-screenshot
           path: ${{ steps.publish.outputs.screenshot }}
-
